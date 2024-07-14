@@ -1,0 +1,320 @@
+import pyttsx3
+import speech_recognition as sr
+import datetime
+import wikipedia
+import webbrowser
+import os
+import smtplib
+import subprocess
+import pygetwindow as gw
+from email.message import EmailMessage
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+import pyautogui
+import time
+
+# Initialize the pyttsx3 engine
+engine = pyttsx3.init('sapi5')
+voices = engine.getProperty('voices')
+engine.setProperty('voice', voices[0].id)  # Use voice[0] (default male voice)
+
+# Dictionary of applications and their paths
+applications = {
+    "notepad": "C:\\Windows\\system32\\notepad.exe",
+    "calculator": "C:\\Windows\\system32\\calc.exe",
+    "paint": "C:\\Windows\\system32\\mspaint.exe",
+    "vs code": "C:\\Users\\amitk\\OneDrive\\Desktop\\Visual Studio Code.lnk",
+    "python": "C:\\Users\\Public\\Desktop\\IntelliJ IDEA Community Edition 2024.1.1.lnk",
+    "word": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+    "excel": "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
+    "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "powerpoint": "C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE"
+    # Add more applications and their paths here
+}
+
+# Dictionary of websites and their URLs
+websites = {
+    "youtube": "https://www.youtube.com",
+    "google": "https://www.google.com",
+    "stackoverflow": "https://stackoverflow.com",
+    "linkedin": "https://www.linkedin.com",
+    "techiehelp": "https://www.techiehelp.com",  # Assuming this is the correct URL for TechieHelp
+    # Add more websites and their URLs here
+}
+
+def speak(audio):
+    """Function to convert text to speech."""
+    print(f"Speaking: {audio}")
+    engine.say(audio)
+    engine.runAndWait()
+
+def wishMe():
+    """Function to wish the user based on the current time."""
+    hour = int(datetime.datetime.now().hour)
+    if hour >= 0 and hour < 12:
+        speak("Good Morning!")
+    elif hour >= 12 and hour < 18:
+        speak("Good Afternoon!")
+    else:
+        speak("Good Evening!")
+    speak("I am Jarvis Sir. Please tell me how may I help you")
+
+def takeCommand():
+    """
+    It takes microphone input from the user and returns string output.
+    Uses Google Speech Recognition to convert audio to text.
+    """
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        r.pause_threshold = 1
+        audio = r.listen(source)
+
+    try:
+        print("Recognizing...")
+        query = r.recognize_google(audio, language='en-in')
+        print(f"User said: {query}\n")
+    except sr.UnknownValueError:
+        print("Could not understand audio, please say that again...")
+        speak("Could not understand audio, please say that again...")
+        return "None"
+    except sr.RequestError:
+        print("Could not request results; check your network connection")
+        speak("Could not request results; check your network connection")
+        return "None"
+    except json.decoder.JSONDecodeError:
+        print("Error decoding the response from the speech recognition service")
+        speak("Sorry, I could not understand the response from the speech recognition service")
+        return "None"
+    return query
+
+def sendEmail(to, content):
+    """
+    Function to send an email using SMTP.
+    Be sure to enable 'less secure apps' access in your Gmail account.
+    """
+    try:
+        msg = EmailMessage()
+        msg.set_content(content)
+        msg['Subject'] = 'Subject'
+        msg['From'] = 'youremail@gmail.com'
+        msg['To'] = to
+
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login('youremail@gmail.com', 'your-password')  # Consider using environment variables for security
+        server.send_message(msg)
+        server.close()
+        speak("Email has been sent!")
+    except Exception as e:
+        print(e)
+        speak("Sorry, I am not able to send this email")
+
+def adjust_volume(level):
+    """
+    Function to adjust system volume.
+    """
+    try:
+        subprocess.call(["nircmd.exe", "setsysvolume", str(level)])
+        speak(f"Volume set to {level/65535*100} percent")
+    except Exception as e:
+        print(e)
+        speak("Sorry, I couldn't adjust the volume")
+
+def adjust_brightness(level):
+    """
+    Function to adjust system brightness.
+    """
+    try:
+        os.system(f"powershell (Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,{level})")
+        speak(f"Brightness set to {level} percent")
+    except Exception as e:
+        print(e)
+        speak("Sorry, I couldn't adjust the brightness")
+
+def minimize_window():
+    """
+    Function to minimize the active window.
+    """
+    try:
+        active_window = gw.getActiveWindow()
+        if active_window:
+            active_window.minimize()
+            speak(f"Minimized {active_window.title}")
+        else:
+            speak("No active window found")
+    except Exception as e:
+        print(e)
+        speak("Sorry, I couldn't minimize the window")
+
+def close_window():
+    """
+    Function to close the active window.
+    """
+    try:
+        active_window = gw.getActiveWindow()
+        if active_window:
+            active_window.close()
+            speak(f"Closed {active_window.title}")
+        else:
+            speak("No active window found")
+    except Exception as e:
+        print(e)
+        speak("Sorry, I couldn't close the window")
+
+def search_google(query):
+    """
+    Function to open Google and search for a query.
+    """
+    driver = webdriver.Chrome(executable_path='path/to/chromedriver')
+    driver.get("http://www.google.com")
+    time.sleep(3)  # Give the browser time to load
+    search_box = driver.find_element_by_name('q')
+    search_box.send_keys(query)
+    search_box.send_keys(Keys.RETURN)
+    return driver
+
+def scroll_page(driver, direction='down'):
+    """
+    Function to scroll the web page.
+    direction: 'down' to scroll down, 'up' to scroll up
+    """
+    if direction == 'down':
+        driver.execute_script("window.scrollBy(0, 1000);")
+    elif direction == 'up':
+        driver.execute_script("window.scrollBy(0, -1000);")
+
+def open_specific_result(driver, result_num=0):
+    """
+    Function to open a specific search result.
+    result_num: 0 for the first result, 1 for the second, etc.
+    """
+    results = driver.find_elements_by_css_selector('h3')
+    if results:
+        results[result_num].click()
+    else:
+        speak("No results found")
+
+if __name__ == "__main__":
+    wishMe()
+    while True:
+        query = takeCommand().lower()
+
+        if query == "none":
+            continue
+
+        # Logic for executing tasks based on query
+        if 'wikipedia' in query:
+            speak('Searching Wikipedia...')
+            query = query.replace("wikipedia", "")
+            try:
+                results = wikipedia.summary(query, sentences=2)
+                speak("According to Wikipedia")
+                print(results)
+                speak(results)
+            except wikipedia.exceptions.DisambiguationError as e:
+                speak("The query is ambiguous, please be more specific")
+            except wikipedia.exceptions.PageError:
+                speak("Sorry, I could not find any results for the query")
+
+        elif 'open' in query:
+            query = query.replace("open ", "").strip()
+
+            # Check if the query matches an application
+            if query in applications:
+                app_path = applications[query]
+                try:
+                    speak(f"Opening {query}...")
+                    os.startfile(app_path)
+                except FileNotFoundError:
+                    speak(f"Application {query} not found at the specified path")
+
+            # Check if the query matches a website
+            elif query in websites:
+                website_url = websites[query]
+                speak(f"Opening {query}...")
+                webbrowser.open(website_url)
+            else:
+                speak(f"Sorry, I don't know how to open {query}")
+
+        elif 'play music' in query:
+            music_dir = 'D:\\Non Critical\\songs\\Favorite Songs2'
+            try:
+                songs = os.listdir(music_dir)
+                if songs:
+                    speak('Playing music...')
+                    os.startfile(os.path.join(music_dir, songs[0]))
+                else:
+                    speak("No songs found in the directory")
+            except FileNotFoundError:
+                speak("Music directory not found")
+
+        elif 'the time' in query:
+            strTime = datetime.datetime.now().strftime("%H:%M:%S")
+            speak(f"Sir, the time is {strTime}")
+
+        elif 'email to harry' in query:
+            try:
+                speak("What should I say?")
+                content = takeCommand()
+                if content != "None":
+                    to = "amityourEmail@gmail.com"
+                    sendEmail(to, content)
+            except Exception as e:
+                print(e)
+                speak("Sorry, I am not able to send this email")
+
+        elif 'volume up' in query:
+            adjust_volume(65535)
+
+        elif 'volume down' in query:
+            adjust_volume(32767)
+
+        elif 'brightness' in query:
+            level = [int(s) for s in query.split() if s.isdigit()]
+            if level:
+                adjust_brightness(level[0])
+            else:
+                speak("Please specify the brightness level")
+
+        elif 'shutdown' in query:
+            speak("Shutting down the system...")
+            os.system("shutdown /s /t 1")
+
+        elif 'restart' in query:
+            speak("Restarting the system...")
+            os.system("shutdown /r /t 1")
+
+        elif 'minimize window' in query:
+            minimize_window()
+
+        elif 'close window' in query:
+            close_window()
+
+        elif 'search on google' in query:
+            speak("What do you want to search for?")
+            search_query = takeCommand()
+            if search_query != "None":
+                driver = search_google(search_query)
+
+        elif 'scroll down' in query:
+            try:
+                scroll_page(driver, 'down')
+            except NameError:
+                speak("Sorry, please open a webpage first")
+
+        elif 'scroll up' in query:
+            try:
+                scroll_page(driver, 'up')
+            except NameError:
+                speak("Sorry, please open a webpage first")
+
+        elif 'open result' in query:
+            try:
+                result_num = [int(s) for s in query.split() if s.isdigit()]
+                if result_num:
+                    open_specific_result(driver, result_num[0] - 1)
+                else:
+                    open_specific_result(driver)
+            except NameError:
+                speak("Sorry, please perform a search first")
